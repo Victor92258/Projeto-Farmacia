@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="pt-PT" id="app-html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaGest - Sistema de Gestão Farmacêutica</title>
+    <!-- Tailwind CSS, FontAwesome e Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { transition: background-color 0.3s, font-size 0.2s; }
+        .active-nav { background-color: #0284c7; color: white; }
+        .font-sans-mode { font-family: ui-sans-serif, system-ui, sans-serif; }
+        .font-serif-mode { font-family: Georgia, Cambria, serif; }
+        .font-mono-mode { font-family: ui-monospace, SFMono-Regular, monospace; }
+    </style>
+</head>
+<body id="app-body" class="bg-slate-50 text-slate-800 font-sans-mode min-h-screen flex flex-col text-base">
+
+    <!-- TOAST DE ALERTA -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <i class="fas fa-info-circle text-sky-400"></i>
+        <span id="toast-text" class="text-sm font-medium"></span>
+    </div>
+
+    <!-- TELA DE LOGIN -->
+    <div id="view-login" class="flex items-center justify-center min-h-screen bg-slate-900 px-4 fixed inset-0 z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="flex justify-center items-center gap-2 mb-2">
+                    <i class="fas fa-mortar-pestle text-sky-500 text-3xl"></i>
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">PharmaGest</h2>
+                </div>
+                <p class="text-gray-500 text-xs uppercase font-bold" id="lbl-login-sub">Painel de Acesso Corporativo</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1">E-mail</label>
+                    <input type="email" id="login-email" value="admin@pharma.com" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-1" id="lbl-login-pass">Palavra-passe</label>
+                    <input type="password" id="login-pass" value="admin123" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-sky-500 text-sm bg-slate-50">
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-xl font-bold transition text-sm">Entrar no Sistema</button>
+            </form>
+            <p class="text-center text-[10px] text-slate-400 mt-4">Padrão técnico: admin@pharma.com / admin123</p>
+        </div>
+    </div>
+
+    <!-- INTERFACE PRINCIPAL -->
+    <div id="main-layout" class="hidden flex flex-col min-h-screen">
+        <!-- TOPO / HEADER -->
+        <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-mortar-pestle text-sky-400 text-2xl"></i>
+                <h1 class="text-xl font-black tracking-tight">Pharma<span class="text-sky-400">Gest</span></h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="clock" class="text-xs font-mono text-slate-400 hidden sm:inline">00:00:00</span>
+                <button onclick="switchTab('definicoes')" class="bg-slate-800 p-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white transition text-xs"><i class="fas fa-cog"></i></button>
+                <button onclick="handleLogout()" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition" id="btn-logout">Sair</button>
+            </div>
+        </header>
+
+        <!-- MENU DE NAVEGAÇÃO -->
+        <nav class="bg-white border-b border-slate-200 p-2 overflow-x-auto whitespace-nowrap flex gap-1 sticky top-[64px] z-40 shadow-sm scrollbar-none">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-item px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition active-nav">
+                <i class="fas fa-chart-pie mr-1.5"></i><span id="nav-dash">Dashboard</span>
+            </button>
+            <button onclick="switchTab('pdv')" id="btn-pdv" class="nav-item px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+                <i class="fas fa-cash-register mr-1.5"></i><span id="nav-pdv">Balcão / PDV</span>
+            </button>
+            <button onclick="switchTab('stock')" id="btn-stock" class="nav-item px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+                <i class="fas fa-boxes-stacked mr-1.5"></i><span id="nav-stock">Stock</span>
+            </button>
+            <button onclick="switchTab('clientes')" id="btn-clientes" class="nav-item px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+                <i class="fas fa-users mr-1.5"></i><span id="nav-clientes">Clientes</span>
+            </button>
+            <button onclick="switchTab('relatorios')" id="btn-relatorios" class="nav-item px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+                <i class="fas fa-file-invoice-dollar mr-1.5"></i><span id="nav-rel">Relatórios</span>
+            </button>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="flex-grow p-4 max-w-7xl w-full mx-auto">
+
+            <!-- TELA 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card">
+                        <p class="text-xs text-slate-400 font-bold uppercase" id="lbl-dash-v">Vendas Hoje</p>
+                        <p id="dash-vendas-hoje" class="text-xl font-black mt-1 text-slate-900">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card">
+                        <p class="text-xs text-slate-400 font-bold uppercase" id="lbl-dash-f">Faturação Diária</p>
+                        <p id="dash-faturacao" class="text-xl font-black mt-1 text-emerald-600">0,00 Kz</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card">
+                        <p class="text-xs text-slate-400 font-bold uppercase" id="lbl-dash-r">Rutura de Stock</p>
+                        <p id="dash-rutura" class="text-xl font-black mt-1 text-red-500">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card">
+                        <p class="text-xs text-slate-400 font-bold uppercase" id="lbl-dash-e">Lotes a Expirar</p>
+                        <p id="dash-expirar" class="text-xl font-black mt-1 text-amber-500">0</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card">
+                        <canvas id="chart-vendas" class="w-full" height="150"></canvas>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm panel-card flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-sm uppercase tracking-wide text-red-500 mb-3" id="lbl-alertas"><i class="fas fa-triangle-exclamation mr-1"></i> Alertas Críticos</h3>
+                            <div id="container-alertas" class="space-y-2 max-h-60 overflow-y-auto text-xs"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TELA 2: PONTO DE VENDA (PDV) -->
+            <div id="tab-pdv" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border shadow-sm panel-card">
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2" id="lbl-procurar">Procurar Medicamento</label>
+                        <div class="relative">
+                            <input type="text" id="pdv-search" oninput="searchProductPDV()" placeholder="..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 outline-none focus:ring-2 focus:ring-sky-500 text-sm">
+                            <i class="fas fa-search absolute left-3.5 top-4 text-slate-400"></i>
+                        </div>
+                        <div id="pdv-search-results" class="mt-2 divide-y border border-slate-100 rounded-xl overflow-hidden hidden max-h-48 overflow-y-auto bg-white"></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border shadow-sm overflow-hidden panel-card">
+                        <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-sm uppercase text-slate-600" id="lbl-cupao">Cupão de Venda</h3>
+                            <button onclick="clearCart()" class="text-xs text-red-500 font-semibold hover:underline">Limpar</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <tbody id="cart-table-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div id="receita-box" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl shadow-sm hidden">
+                        <div class="flex items-center gap-2 text-amber-800 font-bold text-sm mb-3">
+                            <i class="fas fa-file-prescription text-lg"></i>
+                            <span id="lbl-rec-titulo">Controlo de Receita</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <input type="text" id="rec-medico" placeholder="Médico" class="w-full p-2 border border-amber-300 rounded-lg outline-none">
+                            <input type="text" id="rec-numero" placeholder="Nº Receita" class="w-full p-2 border border-amber-300 rounded-lg outline-none">
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4 panel-card">
+                        <div class="flex justify-between items-center text-slate-900 font-black text-xl">
+                            <span>Total</span>
+                            <span id="pdv-total" class="text-sky-600">0,00 Kz</span>
+                        </div>
+                        <button onclick="finalizeSale()" id="btn-concluir" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex justify-center items-center gap-2 text-sm">Concluir</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TELA 3: STOCK -->
+            <div id="tab-stock" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-2xl border shadow-sm panel-card">
+                    <h3 class="font-bold text-base text-slate-800 mb-4" id="lbl-add-f">Registar Fármaco</h3>
+                    <form onsubmit="addProduct(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                        <input type="text" id="p-nome" placeholder="Nome Comercial" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <input type="text" id="p-principio" placeholder="Princípio Ativo" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <select id="p-categoria" class="border p-2.5 rounded-xl bg-slate-50 outline-none text-slate-500">
+                            <option value="Antibiótico">Antibiótico</option>
+                            <option value="Analgésico">Analgésico</option>
+                            <option value="Vitamina">Vitamina</option>
+                        </select>
+                        <input type="text" id="p-lote" placeholder="Lote" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <input type="date" id="p-validade" required class="border p-2.5 rounded-xl bg-slate-50 outline-none text-slate-600">
+                        <input type="number" id="p-qtd" placeholder="Quantidade" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <input type="number" step="0.01" id="p-preco" placeholder="Preço (Kz)" required class="border p-2.5 rounded-xl bg-slate-50 outline-none sm:col-span-2 lg:col-span-1">
+                        <button type="submit" id="btn-add-stock" class="bg-sky-600 text-white font-bold p-2.5 rounded-xl hover:bg-sky-700 transition sm:col-span-2 lg:col-span-2 text-sm">Inserir no Inventário</button>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-hidden panel-card">
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><tbody id="stock-table-body" class="divide-y text-slate-700"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- TELA 4: CLIENTES -->
+            <div id="tab-clientes" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-2xl border shadow-sm panel-card">
+                    <form onsubmit="addCustomer(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <input type="text" id="c-nome" placeholder="Nome do Paciente" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <input type="text" id="c-telefone" placeholder="Telemóvel" required class="border p-2.5 rounded-xl bg-slate-50 outline-none">
+                        <button type="submit" id="btn-reg-paciente" class="bg-slate-900 text-white font-bold p-2.5 rounded-xl transition text-sm">Registar Paciente</button>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border shadow-sm overflow-hidden panel-card"><table class="w-full text-left text-sm"><tbody id="customer-table-body" class="divide-y"></tbody></table></div>
+            </div>
+
+            <!-- TELA 5: RELATÓRIOS -->
+            <div id="tab-relatorios" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-2xl border shadow-sm panel-card">
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><tbody id="sales-table-body" class="divide-y"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- TELA 6: DEFINIÇÕES (ADICIONADO O CADASTRO DE UTILIZADORES) -->
+            <div id="tab-definicoes" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border shadow-sm panel-card max-w-2xl mx-auto space-y-6">
+                    <h3 class="font-black text-lg border-b pb-2 flex items-center gap-2 text-slate-800">
+                        <i class="fas fa-sliders text-sky-500"></i> <span id="lbl-def-titulo">Configurações do Sistema</span>
+                    </h3>
+                    
+                    <!-- Idioma -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-2" id="lbl-def-lang">Idioma do Painel</label>
+                        <select id="setting-lang" onchange="applyLanguage(this.value)" class="w-full bg-slate-50 border p-2.5 rounded-xl text-sm outline-none font-medium">
+                            <option value="pt">🇵🇹 Português (PT)</option>
+                            <option value="en">🇺🇸 English (EN)</option>
+                            <option value="fr">🇫🇷 Français (FR)</option>
+                            <option value="kg">🇦🇴 Kikongo (Angola)</option>
+                        </select>
+                    </div>
+
+                    <!-- Cor de Fundo -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-2" id="lbl-def-color">Cor de Fundo (Tema)</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <button onclick="applyBg('slate')" class="p-3 rounded-xl bg-slate-50 border text-slate-700 text-xs font-bold hover:bg-slate-100 transition">Padrão Cinza</button>
+                            <button onclick="applyBg('emerald')" class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition">Verde Clínico</button>
+                            <button onclick="applyBg('sky')" class="p-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-xs font-bold hover:bg-sky-100 transition">Azul Pharma</button>
+                            <button onclick="applyBg('zinc')" class="p-3 rounded-xl bg-zinc-200 border border-zinc-300 text-zinc-900 text-xs font-bold hover:bg-zinc-300 transition">Modo Escuro</button>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Letra -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-2" id="lbl-def-font">Tipo de Letra (Fonte)</label>
+                        <select id="setting-font" onchange="applyFont(this.value)" class="w-full bg-slate-50 border p-2.5 rounded-xl text-sm outline-none font-medium">
+                            <option value="font-sans-mode">Interface Moderna (Sans)</option>
+                            <option value="font-serif-mode">Clássica Editora (Serif)</option>
+                            <option value="font-mono-mode">Terminal Técnico (Monospace)</option>
+                        </select>
+                    </div>
+
+                    <!-- Tamanho da Letra -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-400 mb-2" id="lbl-def-size">Tamanho do Texto</label>
+                        <div class="flex gap-2">
+                            <button onclick="applyFontSize('text-sm')" class="flex-1 p-2 bg-slate-100 hover:bg-slate-200 text-xs rounded-lg font-bold">Pequeno</button>
+                            <button onclick="applyFontSize('text-base')" class="flex-1 p-2 bg-slate-100 hover:bg-slate-200 text-xs rounded-lg font-bold">Médio</button>
+                            <button onclick="applyFontSize('text-lg')" class="flex-1 p-2 bg-slate-100 hover:bg-slate-200 text-xs rounded-lg font-bold">Grande</button>
+                        </div>
+                    </div>
+
+                    <!-- SECTOR DE CADASTRO DE UTILIZADORES -->
+                    <div class="border-t pt-4 space-y-4">
+                        <h4 class="font-bold text-sm text-slate-700 uppercase tracking-wider flex items-center gap-1.5" id="lbl-def-cad-user">
+                            <i class="fas fa-user-plus text-sky-500"></i> Cadastrar Novo Operador / Utilizador
+                        </h4>
+                        <form onsubmit="registerNewUser(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <input type="email" id="reg-user-email" placeholder="E-mail de acesso" required class="border p-2.5 rounded-xl bg-slate-50 outline-none w-full">
+                            <input type="password" id="reg-user-pass" placeholder="Palavra-passe" required class="border p-2.5 rounded-xl bg-slate-50 outline-none w-full">
+                            <button type="submit" id="btn-cad-user" class="sm:col-span-2 bg-slate-900 text-white font-bold p-2.5 rounded-xl hover:bg-slate-800 transition text-sm">Salvar Utilizador</button>
+                        </form>
+                        <!-- Lista de Utilizadores Ativos -->
+                        <div class="bg-slate-50 rounded-xl p-3 border">
+                            <p class="text-[11px] font-bold uppercase text-slate-400 mb-2">Utilizadores Registados no Dispositivo</p>
+                            <ul id="list-users-active" class="divide-y text-xs text-slate-600"></ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // DICTIONARY
+        const linguas = {
+            pt: {
+                sub: "Painel de Acesso Corporativo", pass: "Palavra-passe", btnLogin: "Entrar no Sistema", logout: "Sair",
+                dash: "Dashboard", pdv: "Balcão / PDV", stock: "Stock", clientes: "Clientes", rel: "Relatórios",
+                vendasH: "Vendas Hoje", fatH: "Faturação Diária", rut: "Rutura de Stock", exp: "Lotes a Expirar",
+                alertas: "Alertas Críticos", procurar: "Procurar Medicamento", cupao: "Cupão de Venda",
+                recTit: "Controlo de Receita", concluir: "Concluir e Emitir Talão", addF: "Registar Fármaco",
+                defTit: "Configurações do Sistema", defLang: "Idioma do Painel", defColor: "Cor de Fundo (Tema)",
+                defFont: "Tipo de Letra (Fonte)", defSize: "Tamanho do Texto",
+                cadUser: "Cadastrar Novo Operador / Utilizador", btnCad: "Salvar Utilizador"
+            },
+            en: {
+                sub: "Corporate Access Panel", pass: "Password", btnLogin: "Login to System", logout: "Sign Out",
+                dash: "Dashboard", pdv: "Counter / POS", stock: "Inventory", clientes: "Patients", rel: "Reports",
+                vendasH: "Sales Today", fatH: "Daily Revenue", rut: "Stock Out", exp: "Expiring Batches",
+                alertas: "Critical Alerts", procurar: "Search Medicine", cupao: "Sales Ticket",
+                recTit: "Prescription Control", concluir: "Finalize Sale", addF: "Register Medicine",
+                defTit: "System Settings", defLang: "Panel Language", defColor: "Background Color",
+                defFont: "Font Style", defSize: "Text Size",
+                cadUser: "Register New Operator / User", btnCad: "Save User"
+            },
+            fr: {
+                sub: "Panneau d'Accès Entreprise", pass: "Mot de passe", btnLogin: "Se Connecter", logout: "Déconnexion",
+                dash: "Tableau de Bord", pdv: "Comptoir / Vente", stock: "Stock", clientes: "Patients", rel: "Rapports",
+                vendasH: "Ventes Aujourd'hui", fatH: "Revenu Quotidien", rut: "Rupture de Stock", exp: "Lots Expirando",
+                alertas: "Alertes Critiques", procurar: "Rechercher Médicament", cupao: "Ticket de Caisse",
+                recTit: "Contrôle d'Ordonnance", concluir: "Finaliser la Vente", addF: "Enregistrer Médicament",
+                defTit: "Configuration Système", defLang: "Langue du Panneau", defColor: "Couleur de Fond",
+                defFont: "Style de Police", defSize: "Taille du Texte",
+                cadUser: "Enregistrer un Nouvel Opérateur", btnCad: "Enregistrer l'utilisateur"
+            },
+            kg: {
+                sub: "Kinkutakani kia Nkotolo", pass: "Nsabi ya nkotolo", btnLogin: "Kota muna Kisalu", logout: "Vaika",
+                dash: "Ndongama", pdv: "Kilo kia Nteko", stock: "Lundilu", clientes: "Bbevo / Mayela", rel: "Nsangu",
+                vendasH: "Nteko Textila Ounu", fatH: "Nzimbu zizolele", rut: "Nlongo mimanini", exp: "Nlongo miwumini",
+                alertas: "Lukebisu Lwambote", procurar: "Vavulula Nlongo", cupao: "Mukanda wa Nteko",
+                recTit: "Nswa wa Nlongo", concluir: "Manisa Nteko", addF: "Soneka Nlongo Wampa",
+                defTit: "Nkubukulu za Kisalu", defLang: "Ndinga ya Mbazi", defColor: "Nsinga wa fula",
+                defFont: "Masono", defSize: "Mvula za masono",
+                cadUser: "Soneka Nsadisi Wampa muna Kisalu", btnCad: "Lunda Nsadisi"
+            }
+        };
+
+        let inventario = JSON.parse(localStorage.getItem('pharma_stock')) || [
+            { id: 1, nome: "Amoxicilina 500mg", principio: "Amoxicilina", categoria: "Antibiótico", lote: "AMX24-02", validade: "2026-12-15", qtd: 45, preco: 3200 },
+            { id: 2, nome: "Paracetamol 1g", principio: "Paracetamol", categoria: "Analgésico", lote: "PRC24-09", validade: "2026-07-20", qtd: 120, preco: 850 }
+        ];
+        let clientes = JSON.parse(localStorage.getItem('pharma_customers')) || [];
+        let historicoVendas = JSON.parse(localStorage.getItem('pharma_sales')) || [];
+        let usuariosCadastrados = JSON.parse(localStorage.getItem('pharma_users')) || [];
+        let carrinho = [];
+        let chartInstance = null;
+
+        window.onload = function() {
+            if(sessionStorage.getItem('logged_in') === 'true') {
+                document.getElementById('view-login').classList.add('hidden');
+                document.getElementById('main-layout').classList.remove('hidden');
+            }
+            
+            applyLanguage(localStorage.getItem('def_lang') || 'pt');
+            applyBg(localStorage.getItem('def_bg') || 'slate');
+            applyFont(localStorage.getItem('def_font') || 'font-sans-mode');
+            applyFontSize(localStorage.getItem('def_size') || 'text-base');
+
+            setInterval(() => {
+                document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+            }, 1000);
+
+            updateDashboard();
+            renderStock();
+            renderCustomers();
+            renderSalesHistory();
+            renderUsersList();
+        };
+
+        // VALIDAÇÃO DINÂMICA DE LOGIN
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+
+            // Verificação contra o admin base ou utilizadores criados no localStorage
+            const usuarioValido = usuariosCadastrados.find(u => u.email === email && u.pass === pass);
+
+            if((email === 'admin@pharma.com' && pass === 'admin123') || usuarioValido) {
+                sessionStorage.setItem('logged_in', 'true');
+                document.getElementById('view-login').classList.add('hidden');
+                document.getElementById('main-layout').classList.remove('hidden');
+                showToast("Nkotolo yambote!");
+                updateDashboard();
+            } else {
+                alert("Erro: Credenciais inválidas ou não registadas!");
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('logged_in');
+            location.reload();
+        }
+
+        // LÓGICA DE CADASTRO DE NOVOS UTILIZADORES
+        function registerNewUser(e) {
+            e.preventDefault();
+            const email = document.getElementById('reg-user-email').value;
+            const pass = document.getElementById('reg-user-pass').value;
+
+            if (email === 'admin@pharma.com') {
+                alert("Este e-mail está reservado para o administrador padrão.");
+                return;
+            }
+
+            if (usuariosCadastrados.some(u => u.email === email)) {
+                alert("Este utilizador já encontra-se registado!");
+                return;
+            }
+
+            usuariosCadastrados.push({ email, pass });
+            localStorage.setItem('pharma_users', JSON.stringify(usuariosCadastrados));
+            e.target.reset();
+            renderUsersList();
+            showToast("Novo operador salvo!");
+        }
+
+        function renderUsersList() {
+            const list = document.getElementById('list-users-active');
+            list.innerHTML = `<li class="py-1.5 flex justify-between text-slate-400"><span>admin@pharma.com (Mestre)</span> <span class="italic text-[10px]">Ativo</span></li>`;
+            usuariosCadastrados.forEach((u, index) => {
+                list.innerHTML += `
+                    <li class="py-1.5 flex justify-between items-center">
+                        <span>${u.email}</span>
+                        <button onclick="deleteUser(${index})" class="text-red-500 hover:underline text-[11px] font-bold">Remover</button>
+                    </li>
+                `;
+            });
+        }
+
+        function deleteUser(index) {
+            if(confirm("Deseja apagar este utilizador do sistema?")) {
+                usuariosCadastrados.splice(index, 1);
+                localStorage.setItem('pharma_users', JSON.stringify(usuariosCadastrados));
+                renderUsersList();
+                showToast("Utilizador removido.");
+            }
+        }
+
+        // CORES, IDIOMAS E ARQUITETURA VISUAL
+        function applyLanguage(lang) {
+            localStorage.setItem('def_lang', lang);
+            document.getElementById('setting-lang').value = lang;
+            const dict = linguas[lang];
+
+            document.getElementById('lbl-login-sub').innerText = dict.sub;
+            document.getElementById('lbl-login-pass').innerText = dict.pass;
+            document.getElementById('btn-login').innerText = dict.btnLogin;
+            document.getElementById('btn-logout').innerText = dict.logout;
+            document.getElementById('nav-dash').innerText = dict.dash;
+            document.getElementById('nav-pdv').innerText = dict.pdv;
+            document.getElementById('nav-stock').innerText = dict.stock;
+            document.getElementById('nav-clientes').innerText = dict.clientes;
+            document.getElementById('nav-rel').innerText = dict.rel;
+
+            document.getElementById('lbl-dash-v').innerText = dict.vendasH;
+            document.getElementById('lbl-dash-f').innerText = dict.fatH;
+            document.getElementById('lbl-dash-r').innerText = dict.rut;
+            document.getElementById('lbl-dash-e').innerText = dict.exp;
+            document.getElementById('lbl-alertas').innerText = dict.alertas;
+            document.getElementById('lbl-procurar').innerText = dict.procurar;
+            document.getElementById('lbl-cupao').innerText = dict.cupao;
+            document.getElementById('lbl-rec-titulo').innerText = dict.recTit;
+            document.getElementById('btn-concluir').innerText = dict.concluir;
+            document.getElementById('lbl-add-f').innerText = dict.addF;
+            document.getElementById('lbl-def-titulo').innerText = dict.defTit;
+            document.getElementById('lbl-def-lang').innerText = dict.defLang;
+            document.getElementById('lbl-def-color').innerText = dict.defColor;
+            document.getElementById('lbl-def-font').innerText = dict.defFont;
+            document.getElementById('lbl-def-size').innerText = dict.defSize;
+            
+            // Novos rótulos traduzíveis do Cadastro de Utilizadores
+            document.getElementById('lbl-def-cad-user').innerHTML = `<i class="fas fa-user-plus text-sky-500"></i> ${dict.cadUser}`;
+            document.getElementById('btn-cad-user').innerText = dict.btnCad;
+        }
+
+        function applyBg(theme) {
+            localStorage.setItem('def_bg', theme);
+            const body = document.getElementById('app-body');
+            body.className = body.className.replace(/bg-\S+/g, '');
+            if(theme === 'slate') body.classList.add('bg-slate-50');
+            if(theme === 'emerald') body.classList.add('bg-emerald-50/50');
+            if(theme === 'sky') body.classList.add('bg-sky-50/60');
+            if(theme === 'zinc') body.classList.add('bg-zinc-800', 'text-white');
+        }
+
+        function applyFont(fontClass) {
+            localStorage.setItem('def_font', fontClass);
+            document.getElementById('setting-font').value = fontClass;
+            const body = document.getElementById('app-body');
+            body.classList.remove('font-sans-mode', 'font-serif-mode', 'font-mono-mode');
+            body.classList.add(fontClass);
+        }
+
+        function applyFontSize(sizeClass) {
+            localStorage.setItem('def_size', sizeClass);
+            const body = document.getElementById('app-body');
+            body.classList.remove('text-sm', 'text-base', 'text-lg');
+            body.classList.add(sizeClass);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-nav'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            if(document.getElementById(`btn-${tabId}`)) document.getElementById(`btn-${tabId}`).classList.add('active-nav');
+            if (tabId === 'dashboard') updateDashboard();
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = text;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+        }
+
+        // SISTEMA CORE DE OPERAÇÃO
+        function updateDashboard() {
+            const hoje = new Date().toISOString().split('T')[0];
+            const vendasHoje = historicoVendas.filter(v => v.data.startsWith(hoje));
+            const faturaHoje = vendasHoje.reduce((acc, curr) => acc + curr.total, 0);
+            const ruturaStock = inventario.filter(p => p.qtd <= 5).length;
+
+            document.getElementById('dash-vendas-hoje').innerText = vendasHoje.length;
+            document.getElementById('dash-faturacao').innerText = faturaHoje.toLocaleString('pt-PT') + " Kz";
+            document.getElementById('dash-rutura').innerText = ruturaStock;
+            document.getElementById('dash-expirar').innerText = inventario.filter(p => new Date(p.validade) <= new Date()).length;
+
+            const container = document.getElementById('container-alertas');
+            container.innerHTML = '';
+            inventario.forEach(p => {
+                if(p.qtd <= 5) container.innerHTML += `<div class="bg-red-50 text-red-700 p-2 rounded-lg border">⚠️ ${p.nome} (${p.qtd} uni)</div>`;
+            });
+            if(container.innerHTML === '') container.innerHTML = '<p class="text-slate-400 text-center">Tudo operacional.</p>';
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('chart-vendas');
+            if(!ctx) return;
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Hoje'],
+                    datasets: [{ label: 'Kz', data: [15000, 48000, 32000, historicoVendas.reduce((a,b)=>a+b.total,0)], borderColor: '#0284c7', fill: false }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        function searchProductPDV() {
+            const query = document.getElementById('pdv-search').value.toLowerCase();
+            const resultsDiv = document.getElementById('pdv-search-results');
+            if(!query) { resultsDiv.classList.add('hidden'); return; }
+            const filtrados = inventario.filter(p => p.nome.toLowerCase().includes(query) || p.principio.toLowerCase().includes(query));
+            if(filtrados.length > 0) {
+                resultsDiv.classList.remove('hidden');
+                resultsDiv.innerHTML = filtrados.map(p => `
+                    <div onclick="addItemToCart(${p.id})" class="p-3 hover:bg-slate-50 cursor-pointer flex justify-between items-center text-xs text-slate-800">
+                        <div><strong>${p.nome}</strong><br><span class="text-[10px] text-slate-400">${p.principio}</span></div>
+                        <div class="text-right"><span class="text-sky-600 font-bold">${p.preco} Kz</span></div>
+                    </div>
+                `).join('');
+            } else { resultsDiv.innerHTML = '<div class="p-2 text-xs text-slate-400">Esgotado.</div>'; }
+        }
+
+        function addItemToCart(id) {
+            const produto = inventario.find(p => p.id === id);
+            if (!produto || produto.qtd <= 0) return;
+            const item = carrinho.find(i => i.id === id);
+            if (item) { if(item.qtdEscolhida < produto.qtd) item.qtdEscolhida++; } 
+            else { carrinho.push({ ...produto, qtdEscolhida: 1 }); }
+            document.getElementById('pdv-search').value = '';
+            document.getElementById('pdv-search-results').classList.add('hidden');
+            renderCart();
+        }
+
+        // RENDER DE SEÇÕES RESTANTES
+        function renderCart() {
+            const tbody = document.getElementById('cart-table-body');
+            tbody.innerHTML = ''; let total = 0; let rec = false;
+            carrinho.forEach((item) => {
+                total += item.preco * item.qtdEscolhida;
+                if(item.categoria === 'Antibiótico') rec = true;
+                tbody.innerHTML += `<tr class="text-xs"><td class="p-2"><strong>${item.nome}</strong></td><td class="p-2">${item.qtdEscolhida}x</td><td class="p-2">${item.preco * item.qtdEscolhida} Kz</td></tr>`;
+            });
+            document.getElementById('pdv-total').innerText = total.toLocaleString('pt-PT') + " Kz";
+            if(rec) document.getElementById('receita-box').classList.remove('hidden');
+            else document.getElementById('receita-box').classList.add('hidden');
+        }
+
+        function clearCart() { carrinho = []; renderCart(); }
+
+        function finalizeSale() {
+            if(carrinho.length === 0) return;
+            carrinho.forEach(item => { const p = inventario.find(i => i.id === item.id); if(p) p.qtd -= item.qtdEscolhida; });
+            historicoVendas.push({ id: Date.now(), data: new Date().toISOString(), itens: "Medicamentos Vários", total: carrinho.reduce((a,b)=>a+(b.preco*b.qtdEscolhida),0), pagamento: "Geral", receita: "N/A" });
+            localStorage.setItem('pharma_stock', JSON.stringify(inventario));
+            localStorage.setItem('pharma_sales', JSON.stringify(historicoVendas));
+            clearCart(); renderStock(); renderSalesHistory(); showToast("Venda guardada!");
+        }
+
+        function addProduct(e) {
+            e.preventDefault();
+            inventario.push({
+                id: Date.now(), nome: document.getElementById('p-nome').value, principio: document.getElementById('p-principio').value,
+                categoria: document.getElementById('p-categoria').value, lote: document.getElementById('p-lote').value,
+                validade: document.getElementById('p-validade').value, qtd: parseInt(document.getElementById('p-qtd').value), preco: parseFloat(document.getElementById('p-preco').value)
+            });
+            localStorage.setItem('pharma_stock', JSON.stringify(inventario));
+            e.target.reset(); renderStock(); showToast("Stock renovado!");
+        }
+
+        function renderStock() {
+            document.getElementById('stock-table-body').innerHTML = inventario.map(p => `
+                <tr class="border-b text-xs"><td class="p-3"><strong>${p.nome}</strong></td><td class="p-3 font-bold">${p.qtd} uni</td><td class="p-3">${p.preco} Kz</td></tr>
+            `).join('');
+        }
+
+        function addCustomer(e) {
+            e.preventDefault();
+            clientes.push({ nome: document.getElementById('c-nome').value, telefone: document.getElementById('c-telefone').value });
+            localStorage.setItem('pharma_customers', JSON.stringify(clientes));
+            e.target.reset(); renderCustomers();
+        }
+
+        function renderCustomers() {
+            document.getElementById('customer-table-body').innerHTML = clientes.map(c => `<tr class="border-b text-xs"><td class="p-2"><strong>${c.nome}</strong></td><td class="p-2">${c.telefone}</td></tr>`).join('');
+        }
+
+        function renderSalesHistory() {
+            document.getElementById('sales-table-body').innerHTML = historicoVendas.map(v => `<tr class="text-xs"><td class="p-2">${v.data.slice(0,10)}</td><td class="p-2 font-bold">${v.total} Kz</td></tr>`).join('');
+        }
+    </script>
+</body>
+</html>
